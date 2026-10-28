@@ -467,7 +467,16 @@ header.hero,section{scroll-margin-top:12px}
   document.body.append(rail, btn, sheet);
   const toggle = open => { sheet.classList.toggle('open', open); btn.textContent = open ? '✕' : '☰'; };
   btn.addEventListener('click', () => toggle(!sheet.classList.contains('open')));
-  sheet.addEventListener('click', e => e.target.closest('a') && toggle(false));
+  [rail, sheet].forEach(nav => nav.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    e.preventDefault();
+    toggle(false);
+    const target = document.querySelector(a.getAttribute('href'));
+    const y = target.getBoundingClientRect().top + scrollY - 12;
+    scrollTo({ top: a.classList.contains('top') ? 0 : y, behavior: reduce ? 'auto' : 'smooth' });
+    history.replaceState(null, '', a.getAttribute('href'));
+  }));
   document.addEventListener('click', e => { if (!e.target.closest('#sheet, #navbtn')) toggle(false); });
   const setActive = i => $$('#rail a[data-i], #sheet a').forEach(a => a.classList.toggle('on', +a.dataset.i === i));
   const spy = () => {
