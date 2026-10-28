@@ -130,7 +130,11 @@ h1.shine{background:linear-gradient(100deg,var(--text) 0%,var(--text) 35%,var(--
 .tag{animation:tagpulse 3s ease-in-out infinite}
 @keyframes tagpulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 18%,transparent)}}
 
-#typed::after{content:"";display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:-3px;
+/* ghost copy keeps the box at full height so the page never jumps while typing */
+#typed{display:grid}
+#typed > span{grid-area:1/1}
+#typed .ghost{visibility:hidden}
+#typed .live::after{content:"";display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:-3px;
   background:var(--accent);animation:caret 1s steps(1) infinite}
 @keyframes caret{50%{opacity:0}}
 
@@ -531,12 +535,15 @@ header.hero,section{scroll-margin-top:12px}
 
   // typing quote
   const typed = document.getElementById('typed');
-  const full = typed.textContent; typed.textContent = '';
+  const full = typed.textContent;
+  typed.innerHTML = '<span class="ghost" aria-hidden="true"></span><span class="live"></span>';
+  typed.firstChild.textContent = full;
+  const live = typed.lastChild;
   let ti = 0;
   const type = () => {
-    typed.textContent = full.slice(0, ++ti);
+    live.textContent = full.slice(0, ++ti);
     if (ti < full.length) setTimeout(type, 28 + Math.random() * 40);
-    else setTimeout(() => { ti = 0; typed.textContent = ''; setTimeout(type, 600); }, 5000);
+    else setTimeout(() => { ti = 0; live.textContent = ''; setTimeout(type, 600); }, 5000);
   };
   setTimeout(type, 500);
 
@@ -604,8 +611,11 @@ header.hero,section{scroll-margin-top:12px}
   };
   const resize = () => {
     dpr = Math.min(devicePixelRatio || 1, 2);
+    const sameWidth = W === innerWidth && pts.length;
     W = innerWidth; H = innerHeight;
     cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    // mobile address bar only changes height: keep the scene instead of regenerating it
+    if (sameWidth) return;
     const n = Math.round(Math.min(90, W * H / 16000));
     pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H,
       vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: Math.random() * 1.6 + .6 }));
