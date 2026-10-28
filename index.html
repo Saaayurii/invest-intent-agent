@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Intent Agent — AI-агент торговых намерений</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="apple-touch-icon" href="favicon.svg">
+<meta name="theme-color" content="#0f1012">
 <meta name="description" content="AI-агент, который превращает торговое намерение на обычном языке в проверенный план заявок через T-Invest MCP. Концепция и архитектура MVP.">
 <style>
 :root{
@@ -96,16 +99,152 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;pa
   .layer .lbl{padding-top:0}
   header.hero{padding-top:40px}
 }
+
+/* ---------- motion layer ---------- */
+html{background:var(--bg)}
+body{background:transparent;overflow-x:hidden}
+#bg{position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none}
+.aurora{position:fixed;inset:-20vmax;z-index:-2;pointer-events:none;filter:blur(70px);opacity:.55}
+.aurora span{position:absolute;width:55vmax;height:55vmax;border-radius:50%;mix-blend-mode:normal}
+.aurora span:nth-child(1){background:radial-gradient(circle,var(--accent) 0,transparent 60%);top:5%;left:10%;animation:drift1 22s ease-in-out infinite alternate}
+.aurora span:nth-child(2){background:radial-gradient(circle,var(--ai) 0,transparent 60%);top:35%;right:0;animation:drift2 26s ease-in-out infinite alternate}
+.aurora span:nth-child(3){background:radial-gradient(circle,var(--code) 0,transparent 60%);bottom:0;left:30%;animation:drift3 30s ease-in-out infinite alternate}
+@media (prefers-color-scheme: light){.aurora{opacity:.28}}
+:root[data-theme="light"] .aurora{opacity:.28}
+@keyframes drift1{to{transform:translate(18vmax,14vmax) scale(1.2)}}
+@keyframes drift2{to{transform:translate(-22vmax,-10vmax) scale(.85)}}
+@keyframes drift3{to{transform:translate(12vmax,-18vmax) scale(1.15)}}
+
+#progress{position:fixed;top:0;left:0;height:3px;width:100%;transform-origin:0 50%;transform:scaleX(0);z-index:10;
+  background:linear-gradient(90deg,var(--accent),var(--ai),var(--code))}
+
+.card,.box,.tablewrap,pre,.quote{background:color-mix(in srgb,var(--surface) 78%,transparent);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px)}
+.box.ai{background:color-mix(in srgb,var(--ai-soft) 85%,transparent)}
+.box.code{background:color-mix(in srgb,var(--code-soft) 85%,transparent)}
+.box.ext{background:color-mix(in srgb,var(--accent-soft) 85%,transparent)}
+
+h1.shine{background:linear-gradient(100deg,var(--text) 0%,var(--text) 35%,var(--accent) 45%,var(--ai) 55%,var(--text) 65%,var(--text) 100%);
+  background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite}
+@keyframes shine{from{background-position:100% 0}to{background-position:-150% 0}}
+.tag{animation:tagpulse 3s ease-in-out infinite}
+@keyframes tagpulse{50%{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 18%,transparent)}}
+
+#typed::after{content:"";display:inline-block;width:2px;height:1.1em;margin-left:3px;vertical-align:-3px;
+  background:var(--accent);animation:caret 1s steps(1) infinite}
+@keyframes caret{50%{opacity:0}}
+
+.marquee{margin-top:22px;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+.marquee .track{display:flex;gap:12px;width:max-content;animation:marq 40s linear infinite}
+.marquee:hover .track{animation-play-state:paused}
+.marquee .chip{white-space:nowrap;font-size:14px;padding:6px 12px;border-radius:999px;border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 70%,transparent);color:var(--muted)}
+@keyframes marq{to{transform:translateX(-50%)}}
+
+.reveal{opacity:0;transform:translateY(28px) scale(.98);filter:blur(6px);
+  transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1),filter .8s;transition-delay:var(--d,0s)}
+.reveal.in{opacity:1;transform:none;filter:none}
+.card.reveal,.box.reveal{transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1),filter .8s;transition-delay:var(--d,0s)}
+
+.card,.box{position:relative;overflow:hidden;transition:transform .35s cubic-bezier(.2,.7,.2,1),box-shadow .35s,border-color .35s}
+.card::after,.box::after{content:"";position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity .3s;
+  background:radial-gradient(260px circle at var(--mx,50%) var(--my,50%),color-mix(in srgb,var(--accent) 22%,transparent),transparent 70%)}
+.card:hover::after,.box:hover::after{opacity:1}
+.card:hover,.box:hover{transform:translateY(-4px);border-color:color-mix(in srgb,var(--accent) 55%,var(--line));
+  box-shadow:0 14px 40px -12px color-mix(in srgb,var(--accent) 35%,transparent)}
+
+.step .n{transition:transform .4s,box-shadow .4s}
+.step.active .n{transform:scale(1.15)}
+.step.active .n.ai{box-shadow:0 0 0 6px color-mix(in srgb,var(--ai) 22%,transparent),0 0 24px var(--ai)}
+.step.active .n.code{box-shadow:0 0 0 6px color-mix(in srgb,var(--code) 22%,transparent),0 0 24px var(--code)}
+.step.active .n.user{box-shadow:0 0 0 6px color-mix(in srgb,var(--accent) 30%,transparent),0 0 24px var(--accent)}
+.step .body b{transition:color .4s}
+.step.active .body b{color:var(--accent)}
+.step:not(:last-child) .n::after{background:linear-gradient(var(--line),var(--line))}
+.step.done:not(:last-child) .n::after{background:linear-gradient(var(--accent),var(--ai))}
+
+.arrow{position:relative;padding:6px 0}
+.arrow::before{content:"";display:block;height:2px;margin:0 auto 6px;max-width:420px;border-radius:2px;
+  background:repeating-linear-gradient(90deg,var(--accent) 0 10px,transparent 10px 20px);background-size:40px 2px;
+  animation:flow 1s linear infinite}
+@keyframes flow{to{background-position:40px 0}}
+
+pre .k{color:var(--ai)}pre .s{color:var(--code)}pre .num{color:var(--accent)}
+pre.typing::after{content:"▋";color:var(--accent);animation:caret 1s steps(1) infinite}
+
+.big{background:linear-gradient(90deg,var(--accent),var(--ai));-webkit-background-clip:text;background-clip:text;color:transparent}
+.risk{animation:none}
+.risk:hover{border-left-color:var(--warn);box-shadow:0 14px 40px -12px color-mix(in srgb,var(--warn) 40%,transparent)}
+
+h2{position:relative;display:inline-block}
+h2::after{content:"";position:absolute;left:0;bottom:-4px;height:3px;width:100%;border-radius:3px;
+  background:linear-gradient(90deg,var(--accent),var(--ai));transform:scaleX(0);transform-origin:0 50%;transition:transform 1s .2s cubic-bezier(.2,.7,.2,1)}
+h2.in::after{transform:scaleX(1)}
+
+tbody tr{transition:background .25s}
+tbody tr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
+
+/* ---------- phone ---------- */
+@media (max-width:640px){
+  body{font-size:15px}
+  section{padding:36px 0}
+  header.hero{padding:36px 0 28px}
+  h1{font-size:34px}
+  .lead{font-size:16px}
+  .quote{font-size:16px;padding:14px 16px}
+  .grid,.split,.road{grid-template-columns:1fr;gap:12px}
+  .card{padding:16px}
+  .step{grid-template-columns:36px 1fr;gap:12px}
+  .step .n{width:36px;height:36px;font-size:14px}
+  .step:not(:last-child) .n::after{top:36px}
+  .step .body{padding:4px 0 18px}
+  .box{flex:1 1 100%}
+  .arrow{font-size:12px}
+  pre{font-size:12px;padding:12px}
+  .metric .card{flex:1 1 100%}
+  .big{font-size:30px}
+  .marquee .chip{font-size:13px}
+  .card:hover,.box:hover{transform:none}
+  /* table → stacked cards */
+  .tablewrap{border:0;background:none;backdrop-filter:none;-webkit-backdrop-filter:none;overflow:visible}
+  .tablewrap table,.tablewrap tbody,.tablewrap tr,.tablewrap td{display:block;width:100%}
+  .tablewrap thead{display:none}
+  .tablewrap tr{margin-bottom:12px;border:1px solid var(--line);border-radius:12px;padding:6px 0;
+    background:color-mix(in srgb,var(--surface) 78%,transparent)}
+  .tablewrap td{border:0;padding:6px 14px}
+  .tablewrap td:first-child{font-weight:600;font-size:16px}
+  .tablewrap td:not(:first-child)::before{content:attr(data-l);display:block;font-size:11px;font-weight:600;
+    text-transform:uppercase;letter-spacing:.04em;color:var(--muted)}
+  .aurora{filter:blur(50px)}
+}
+
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .reveal{opacity:1;transform:none;filter:none}
+  #bg{display:none}
+}
 </style>
 </head>
 <body>
+<div class="aurora" aria-hidden="true"><span></span><span></span><span></span></div>
+<canvas id="bg" aria-hidden="true"></canvas>
+<div id="progress" aria-hidden="true"></div>
 
 <header class="hero">
   <div class="wrap">
     <span class="tag">Инвест. Премаркет · трек «AI-агент»</span>
-    <h1>Intent Agent</h1>
+    <h1 class="shine">Intent Agent</h1>
     <p class="lead">AI-агент, который превращает торговое намерение на обычном языке в проверенный план заявок, объясняет каждый шаг и исполняет его через T-Invest MCP после подтверждения клиента.</p>
-    <div class="quote"><small>Клиент пишет или говорит:</small>«Зафиксируй половину прибыли по Сберу, а если упадёт ниже 290 — продай всё»</div>
+    <div class="quote"><small>Клиент пишет или говорит:</small><span id="typed">«Зафиксируй половину прибыли по Сберу, а если упадёт ниже 290 — продай всё»</span></div>
+    <div class="marquee" aria-hidden="true"><div class="track">
+      <span class="chip">«Купи Газпром на 10 000 ₽»</span>
+      <span class="chip">«Поставь стоп на 5% ниже по всем акциям»</span>
+      <span class="chip">«Продай Яндекс, если вырастет до 4500»</span>
+      <span class="chip">«Что такое лот и сколько я реально покупаю?»</span>
+      <span class="chip">«Докупай Лукойл по 500 ₽ каждую пятницу»</span>
+      <span class="chip">«Выйди из всего, если портфель упадёт на 10%»</span>
+    </div></div>
   </div>
 </header>
 
@@ -271,6 +410,196 @@ pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;pa
 <footer>
   <div class="wrap">Концепция для программы Инвест. Премаркет. Не является инвестиционной рекомендацией. Все сделки в MVP выполняются в sandbox.</div>
 </footer>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+
+  // table labels for stacked mobile layout
+  const heads = $$('.tablewrap thead th').map(th => th.textContent);
+  $$('.tablewrap tbody tr').forEach(tr => $$('td', tr).forEach((td, i) => td.dataset.l = heads[i] || ''));
+
+  // seamless marquee
+  const track = document.querySelector('.marquee .track');
+  if (track) track.innerHTML += track.innerHTML;
+
+  if (reduce) return;
+
+  // scroll progress
+  const bar = document.getElementById('progress');
+  const onScroll = () => {
+    const h = document.documentElement.scrollHeight - innerHeight;
+    bar.style.transform = `scaleX(${h > 0 ? scrollY / h : 0})`;
+  };
+  addEventListener('scroll', onScroll, { passive: true }); onScroll();
+
+  // reveal on scroll with stagger
+  const targets = $$('section h2, .sub, .card, .step, .layer, .arrow, pre, .tablewrap tr, .legend, .quote, .marquee, .lead');
+  targets.forEach(el => {
+    el.classList.add('reveal');
+    const sib = [...el.parentElement.children].indexOf(el);
+    el.style.setProperty('--d', `${Math.min(sib, 8) * 0.07}s`);
+  });
+  const io = new IntersectionObserver(es => es.forEach(e => {
+    if (!e.isIntersecting) return;
+    e.target.classList.add('in');
+    e.target.dispatchEvent(new Event('revealed'));
+    io.unobserve(e.target);
+    // drop reveal timing so hover transitions work normally afterwards
+    const d = parseFloat(e.target.style.getPropertyValue('--d')) || 0;
+    setTimeout(() => e.target.classList.remove('reveal'), 900 + d * 1000);
+  }), { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+  targets.forEach(el => io.observe(el));
+
+  // cursor spotlight on cards
+  addEventListener('pointermove', e => {
+    const el = e.target.closest && e.target.closest('.card, .box');
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', `${e.clientX - r.left}px`);
+    el.style.setProperty('--my', `${e.clientY - r.top}px`);
+  }, { passive: true });
+
+  // typing quote
+  const typed = document.getElementById('typed');
+  const full = typed.textContent; typed.textContent = '';
+  let ti = 0;
+  const type = () => {
+    typed.textContent = full.slice(0, ++ti);
+    if (ti < full.length) setTimeout(type, 28 + Math.random() * 40);
+    else setTimeout(() => { ti = 0; typed.textContent = ''; setTimeout(type, 600); }, 5000);
+  };
+  setTimeout(type, 500);
+
+  // flow: walk through steps while visible
+  const steps = $$('.flow .step');
+  let cur = -1, flowTimer = null;
+  const tick = () => {
+    cur = (cur + 1) % (steps.length + 2);
+    steps.forEach((s, i) => { s.classList.toggle('active', i === cur); s.classList.toggle('done', i < cur); });
+  };
+  new IntersectionObserver(([e]) => {
+    if (e.isIntersecting && !flowTimer) flowTimer = setInterval(tick, 1100);
+    else if (!e.isIntersecting && flowTimer) { clearInterval(flowTimer); flowTimer = null; }
+  }, { threshold: 0.2 }).observe(document.querySelector('.flow'));
+
+  // count-up metrics
+  $$('.big').forEach(el => {
+    const m = el.textContent.match(/^(\D*)(\d+)(.*)$/);
+    if (!m) return;
+    const [, pre, num, post] = m, target = +num;
+    el.textContent = pre + '0' + post;
+    el.addEventListener('revealed', () => {
+      const t0 = performance.now(), dur = 1400;
+      const step = now => {
+        const p = Math.min((now - t0) / dur, 1), v = Math.round(target * (1 - Math.pow(1 - p, 3)));
+        el.textContent = pre + v + post;
+        if (p < 1) requestAnimationFrame(step);
+      };
+      requestAnimationFrame(step);
+    }, { once: true });
+  });
+  // .big lives inside .card, forward its reveal
+  $$('.metric .card').forEach(c => c.addEventListener('revealed', () => {
+    const b = c.querySelector('.big'); b && b.dispatchEvent(new Event('revealed'));
+  }, { once: true }));
+
+  // JSON typing + highlight
+  const pre = document.querySelector('pre');
+  const src = pre.textContent;
+  const esc = s => s.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+  const hl = s => esc(s)
+    .replace(/("[^"]*")(\s*:)/g, '<span class="k">$1</span>$2')
+    .replace(/:\s*("[^"]*")/g, ': <span class="s">$1</span>')
+    .replace(/\b(\d+(?:\.\d+)?|true|false|null)\b/g, '<span class="num">$1</span>');
+  pre.style.minHeight = pre.offsetHeight + 'px';
+  pre.textContent = '';
+  pre.addEventListener('revealed', () => {
+    let i = 0; pre.classList.add('typing');
+    const run = () => {
+      i = Math.min(i + 3, src.length);
+      pre.textContent = src.slice(0, i);
+      if (i < src.length) setTimeout(run, 12);
+      else { pre.classList.remove('typing'); pre.innerHTML = hl(src); }
+    };
+    run();
+  }, { once: true });
+
+  // background canvas: particle network + drifting price lines
+  const cv = document.getElementById('bg'), ctx = cv.getContext('2d');
+  let W, H, dpr, pts = [], lines = [], mouse = { x: -1e4, y: -1e4 }, colors = {};
+  const readColors = () => {
+    const cs = getComputedStyle(document.documentElement);
+    colors = { a: cs.getPropertyValue('--accent').trim(), b: cs.getPropertyValue('--ai').trim(),
+               c: cs.getPropertyValue('--code').trim(), m: cs.getPropertyValue('--muted').trim() };
+  };
+  const resize = () => {
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr; ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const n = Math.round(Math.min(90, W * H / 16000));
+    pts = Array.from({ length: n }, () => ({ x: Math.random() * W, y: Math.random() * H,
+      vx: (Math.random() - .5) * .35, vy: (Math.random() - .5) * .35, r: Math.random() * 1.6 + .6 }));
+    lines = [colors.a, colors.b, colors.c].map((col, k) => {
+      const seg = Math.ceil(W / 14) + 2, ys = [];
+      let y = H * (0.3 + k * 0.22);
+      for (let i = 0; i < seg; i++) { y += (Math.random() - .5) * 18; y = Math.max(H * .1, Math.min(H * .9, y)); ys.push(y); }
+      return { col, ys, off: 0, speed: .25 + k * .1 };
+    });
+  };
+  readColors(); resize();
+  addEventListener('resize', resize);
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { readColors(); resize(); });
+  addEventListener('pointermove', e => { mouse.x = e.clientX; mouse.y = e.clientY; }, { passive: true });
+
+  const frame = () => {
+    ctx.clearRect(0, 0, W, H);
+    // price lines
+    lines.forEach(L => {
+      L.off += L.speed;
+      if (L.off >= 14) {
+        L.off -= 14; L.ys.shift();
+        let y = L.ys[L.ys.length - 1] + (Math.random() - .5) * 18;
+        L.ys.push(Math.max(H * .1, Math.min(H * .9, y)));
+      }
+      ctx.beginPath();
+      L.ys.forEach((y, i) => { const x = i * 14 - L.off; i ? ctx.lineTo(x, y) : ctx.moveTo(x, y); });
+      ctx.strokeStyle = L.col; ctx.globalAlpha = .18; ctx.lineWidth = 1.5; ctx.stroke();
+      const lx = (L.ys.length - 1) * 14 - L.off, ly = L.ys[L.ys.length - 1];
+      ctx.globalAlpha = .6; ctx.fillStyle = L.col; ctx.beginPath(); ctx.arc(Math.min(lx, W - 6), ly, 3, 0, 7); ctx.fill();
+    });
+    // particles
+    ctx.globalAlpha = 1;
+    for (const p of pts) {
+      const dx = mouse.x - p.x, dy = mouse.y - p.y, d2 = dx * dx + dy * dy;
+      if (d2 < 22000) { p.vx += dx * 0.00003; p.vy += dy * 0.00003; }
+      p.vx *= .995; p.vy *= .995;
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0 || p.x > W) p.vx *= -1;
+      if (p.y < 0 || p.y > H) p.vy *= -1;
+    }
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      for (let j = i + 1; j < pts.length; j++) {
+        const q = pts[j], dx = p.x - q.x, dy = p.y - q.y, d = dx * dx + dy * dy;
+        if (d < 15000) {
+          ctx.globalAlpha = (1 - d / 15000) * .35; ctx.strokeStyle = colors.b;
+          ctx.lineWidth = .7; ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(q.x, q.y); ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = .7; ctx.fillStyle = i % 3 ? colors.m : colors.a;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+    raf = requestAnimationFrame(frame);
+  };
+  let raf = requestAnimationFrame(frame);
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) cancelAnimationFrame(raf); else raf = requestAnimationFrame(frame);
+  });
+})();
+</script>
 
 </body>
 </html>
