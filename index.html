@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intent Agent — AI-агент торговых намерений</title>
+<meta name="description" content="AI-агент, который превращает торговое намерение на обычном языке в проверенный план заявок через T-Invest MCP. Концепция и архитектура MVP.">
+<style>
+:root{
+  --bg:#f6f6f3;--surface:#ffffff;--surface-2:#efeee9;--text:#17181a;--muted:#5d6066;
+  --line:#dddcd5;--accent:#c99a00;--accent-soft:#fff3c4;--ai:#3a5bd9;--ai-soft:#e6ebff;
+  --code:#1f7a4d;--code-soft:#e2f4ea;--warn:#b4441f;--warn-soft:#fbe7df;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1012;--surface:#17181b;--surface-2:#1f2024;--text:#ecebe6;--muted:#9a9ca3;
+    --line:#2c2d32;--accent:#ffd84d;--accent-soft:#3a3214;--ai:#8ea4ff;--ai-soft:#1d2440;
+    --code:#6fd3a0;--code-soft:#15301f;--warn:#ff9c7a;--warn-soft:#3a1d14;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1012;--surface:#17181b;--surface-2:#1f2024;--text:#ecebe6;--muted:#9a9ca3;
+  --line:#2c2d32;--accent:#ffd84d;--accent-soft:#3a3214;--ai:#8ea4ff;--ai-soft:#1d2440;
+  --code:#6fd3a0;--code-soft:#15301f;--warn:#ff9c7a;--warn-soft:#3a1d14;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);
+  font:16px/1.6 system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+.wrap{max-width:1040px;margin:0 auto;padding:0 16px}
+header.hero{padding:64px 0 40px;border-bottom:1px solid var(--line)}
+.tag{display:inline-block;font-size:13px;font-weight:600;letter-spacing:.02em;
+  background:var(--accent-soft);color:var(--text);padding:4px 10px;border-radius:999px}
+h1{font-size:clamp(30px,5vw,48px);line-height:1.1;margin:16px 0 12px;letter-spacing:-.02em}
+.lead{font-size:clamp(17px,2.2vw,20px);color:var(--muted);max-width:760px;margin:0}
+.quote{margin:28px 0 0;padding:16px 20px;background:var(--surface);border:1px solid var(--line);
+  border-left:4px solid var(--accent);border-radius:10px;font-size:18px}
+.quote small{display:block;color:var(--muted);font-size:13px;margin-bottom:4px}
+section{padding:48px 0;border-bottom:1px solid var(--line)}
+h2{font-size:clamp(22px,3vw,28px);margin:0 0 8px;letter-spacing:-.01em}
+.sub{color:var(--muted);margin:0 0 24px;max-width:760px}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(230px,1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px}
+.card h3{margin:0 0 6px;font-size:17px}
+.card p{margin:0;color:var(--muted);font-size:15px}
+.flow{display:flex;flex-direction:column;gap:0}
+.step{display:grid;grid-template-columns:44px 1fr;gap:14px;align-items:start}
+.step .n{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-weight:700;
+  background:var(--surface);border:2px solid var(--line)}
+.step .n.ai{border-color:var(--ai);color:var(--ai)}
+.step .n.code{border-color:var(--code);color:var(--code)}
+.step .n.user{border-color:var(--accent);color:var(--text);background:var(--accent-soft)}
+.step .body{padding:8px 0 22px}
+.step .body b{display:block;font-size:16px}
+.step .body span{color:var(--muted);font-size:15px}
+.step:not(:last-child) .n{position:relative}
+.step:not(:last-child) .n::after{content:"";position:absolute;top:44px;left:50%;width:2px;height:calc(100% + 8px);
+  background:var(--line);transform:translateX(-50%)}
+.legend{display:flex;flex-wrap:wrap;gap:14px;margin:0 0 20px;font-size:14px;color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:50%;margin-right:6px;vertical-align:-1px;border:2px solid}
+.arch{display:grid;gap:12px}
+.layer{display:grid;grid-template-columns:150px 1fr;gap:12px;align-items:stretch}
+.layer .lbl{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;
+  padding-top:12px}
+.boxes{display:flex;flex-wrap:wrap;gap:10px}
+.box{flex:1 1 180px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.box b{display:block;font-size:15px}
+.box span{font-size:13.5px;color:var(--muted)}
+.box.ai{background:var(--ai-soft);border-color:transparent}
+.box.code{background:var(--code-soft);border-color:transparent}
+.box.ext{background:var(--accent-soft);border-color:transparent}
+.arrow{text-align:center;color:var(--muted);font-size:13px;margin:-2px 0}
+.split{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.pill{display:inline-block;font-size:12px;font-weight:600;padding:2px 8px;border-radius:999px;margin-bottom:8px}
+.pill.ai{background:var(--ai-soft);color:var(--ai)}
+.pill.code{background:var(--code-soft);color:var(--code)}
+table{width:100%;border-collapse:collapse;font-size:15px}
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+th,td{text-align:left;padding:12px 14px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:13px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.03em;background:var(--surface-2)}
+tr:last-child td{border-bottom:0}
+.metric{display:flex;flex-wrap:wrap;gap:16px}
+.metric .card{flex:1 1 220px}
+.big{font-size:34px;font-weight:700;letter-spacing:-.02em;line-height:1.1}
+.risk{border-left:4px solid var(--warn)}
+.risk .pill{background:var(--warn-soft);color:var(--warn)}
+.road{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+.road .card b{color:var(--muted);font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+footer{padding:32px 0 56px;color:var(--muted);font-size:14px}
+code{font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:13.5px;background:var(--surface-2);
+  padding:1px 5px;border-radius:5px}
+pre{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;overflow-x:auto;
+  font:13.5px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;margin:0}
+@media (max-width:640px){
+  .layer{grid-template-columns:1fr}
+  .layer .lbl{padding-top:0}
+  header.hero{padding-top:40px}
+}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <span class="tag">Инвест. Премаркет · трек «AI-агент»</span>
+    <h1>Intent Agent</h1>
+    <p class="lead">AI-агент, который превращает торговое намерение на обычном языке в проверенный план заявок, объясняет каждый шаг и исполняет его через T-Invest MCP после подтверждения клиента.</p>
+    <div class="quote"><small>Клиент пишет или говорит:</small>«Зафиксируй половину прибыли по Сберу, а если упадёт ниже 290 — продай всё»</div>
+  </div>
+</header>
+
+<section>
+  <div class="wrap">
+    <h2>Проблема</h2>
+    <p class="sub">Новичок думает намерениями, а интерфейс брокера требует знать механику заявок. Мы сами столкнулись с этим, торгуя с iPhone через QUIK.</p>
+    <div class="grid">
+      <div class="card"><h3>Сложная механика</h3><p>Лимитные, стоп- и тейк-заявки, лоты, шаг цены — новичку непонятно, что выбрать.</p></div>
+      <div class="card"><h3>Ошибки в деньгах</h3><p>Неверный объём или цена при ручном вводе ведут к прямым потерям.</p></div>
+      <div class="card"><h3>Нет защиты</h3><p>Сложные условия неудобно собирать, поэтому многие не ставят защитные заявки вообще.</p></div>
+      <div class="card"><h3>Агенты — для разработчиков</h3><p>MCP-серверы брокеров уже дают LLM ставить заявки, но без разбора намерений, проверки рисков и понятного подтверждения.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Основной сценарий</h2>
+    <p class="sub">AI понимает и объясняет. Считает и исполняет — детерминированный код. Ни одна заявка не уходит без подтверждения клиента.</p>
+    <div class="legend">
+      <span><i style="border-color:var(--accent);background:var(--accent-soft)"></i>Клиент</span>
+      <span><i style="border-color:var(--ai)"></i>AI</span>
+      <span><i style="border-color:var(--code)"></i>Детерминированный код</span>
+    </div>
+    <div class="flow">
+      <div class="step"><div class="n user">1</div><div class="body"><b>Намерение</b><span>Текст или голос на обычном языке.</span></div></div>
+      <div class="step"><div class="n ai">2</div><div class="body"><b>Маршрутизация</b><span>Лёгкий классификатор определяет: торговая команда, вопрос или прочее.</span></div></div>
+      <div class="step"><div class="n ai">3</div><div class="body"><b>Разбор в JSON-план</b><span>LLM с tool-calling получает портфель и параметры инструмента через MCP, при неоднозначности задаёт уточняющий вопрос.</span></div></div>
+      <div class="step"><div class="n code">4</div><div class="body"><b>Расчёт и проверка рисков</b><span>Лоты, шаг цены, достаточность средств, комиссии, лимиты концентрации.</span></div></div>
+      <div class="step"><div class="n ai">5</div><div class="body"><b>Карточка плана с объяснением</b><span>Какие заявки и условия будут выставлены, сумма, комиссия, предупреждения — простым языком с опорой на базу знаний.</span></div></div>
+      <div class="step"><div class="n user">6</div><div class="body"><b>Подтверждение</b><span>Клиент подтверждает или правит план в диалоге.</span></div></div>
+      <div class="step"><div class="n code">7</div><div class="body"><b>Исполнение и мониторинг</b><span>Заявки через T-Invest MCP; монитор условий по стриму котировок исполняет следующие шаги плана и уведомляет клиента.</span></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Пример JSON-плана</h2>
+    <p class="sub">Результат шага 3 для запроса из примера. Объём и цены дальше пересчитывает и проверяет код.</p>
+<pre>{
+  "instrument": { "ticker": "SBER", "class_code": "TQBR" },
+  "steps": [
+    { "id": 1, "action": "sell", "quantity": { "share_of_position": 0.5 },
+      "order_type": "market", "trigger": null },
+    { "id": 2, "action": "sell", "quantity": { "share_of_position": 1.0 },
+      "order_type": "market",
+      "trigger": { "type": "price_below", "price": 290.0 } }
+  ],
+  "needs_clarification": false,
+  "confidence": 0.94
+}</pre>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Архитектура MVP</h2>
+    <p class="sub">MVP — отдельный веб на sandbox. Дальше бэкенд подключается модулем к вебу и приложению Т-Инвестиций.</p>
+    <div class="arch">
+      <div class="layer"><div class="lbl">Клиент</div><div class="boxes">
+        <div class="box"><b>Next.js + PWA</b><span>Чат, голосовой ввод, карточка плана, портфель, активные условия</span></div>
+      </div></div>
+      <div class="arrow">↓ HTTP / WebSocket</div>
+      <div class="layer"><div class="lbl">Бэкенд</div><div class="boxes">
+        <div class="box"><b>FastAPI</b><span>API, сессии, статусы в реальном времени</span></div>
+        <div class="box ai"><b>AI-агент</b><span>Qwen (Ollama, локально), tool-calling, LoRA-дообучение</span></div>
+        <div class="box ai"><b>Классификатор «да/нет»</b><span>Маршрутизация и контроль уверенности плана</span></div>
+        <div class="box ai"><b>Распознавание речи</b><span>Whisper</span></div>
+      </div></div>
+      <div class="layer"><div class="lbl">Ядро</div><div class="boxes">
+        <div class="box code"><b>Расчёт и риски</b><span>Лоты, шаг цены, средства, комиссии, лимиты</span></div>
+        <div class="box code"><b>Исполнитель</b><span>Выставление заявок через MCP</span></div>
+        <div class="box code"><b>Монитор условий</b><span>Стрим котировок, запуск следующих шагов</span></div>
+      </div></div>
+      <div class="arrow">↕ Kafka — шина событий: котировки, статусы заявок, срабатывания условий</div>
+      <div class="layer"><div class="lbl">Данные</div><div class="boxes">
+        <div class="box"><b>PostgreSQL</b><span>Планы, условия, журнал действий</span></div>
+        <div class="box"><b>Redis</b><span>Сессии, кэш котировок, состояние условий</span></div>
+        <div class="box"><b>Meilisearch</b><span>Гибридный поиск для RAG / REFRAG по базе знаний в Markdown (Obsidian)</span></div>
+      </div></div>
+      <div class="layer"><div class="lbl">Внешнее</div><div class="boxes">
+        <div class="box ext"><b>T-Invest MCP</b><span>Sandbox: счёт, портфель, инструменты, заявки</span></div>
+        <div class="box ext"><b>Invest API</b><span>Стрим котировок, справочник инструментов</span></div>
+      </div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Что делает AI, а что нет</h2>
+    <div class="split">
+      <div class="card"><span class="pill ai">AI</span>
+        <h3>Понимание и объяснение</h3>
+        <p>Свободные формулировки бесконечно разнообразны, неполны и двусмысленны — правила с ними не справляются. AI разбирает намерение в план, задаёт уточняющие вопросы и объясняет лоты, стопы и последствия под уровень конкретного человека.</p>
+      </div>
+      <div class="card"><span class="pill code">Код</span>
+        <h3>Деньги и исполнение</h3>
+        <p>Расчёт объёма и цен, проверка рисков и выставление заявок — детерминированный код. Ошибка модели не может напрямую превратиться в сделку: план всегда пересчитывается и подтверждается клиентом.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Данные</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Данные</th><th>Источник и формат</th><th>Обновление</th><th>Ограничения</th></tr></thead>
+      <tbody>
+        <tr><td>Портфель, позиции, баланс, заявки</td><td>T-Invest MCP, JSON</td><td>По запросу и после сделки</td><td>Sandbox отличается от прода</td></tr>
+        <tr><td>Котировки и стакан</td><td>Стрим Invest API</td><td>Real-time</td><td>Задержки и низкая ликвидность в sandbox</td></tr>
+        <tr><td>Справочник инструментов</td><td>Invest API, JSON</td><td>Раз в день</td><td>—</td></tr>
+        <tr><td>Тарифы и комиссии</td><td>API и документация</td><td>При изменении</td><td>Часть — только в документации</td></tr>
+        <tr><td>База знаний</td><td>Markdown (Obsidian)</td><td>Вручную</td><td>Риск устаревания</td></tr>
+        <tr><td>Запросы клиентов (текст, аудио)</td><td>Свой размеченный набор + датасеты function-calling</td><td>По мере сбора</td><td>Реальных диалогов пока нет</td></tr>
+      </tbody>
+    </table></div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Первый эксперимент</h2>
+    <p class="sub">Гипотеза: локальный Qwen с RAG корректно переводит торговое намерение в JSON-план заявок.</p>
+    <div class="metric">
+      <div class="card"><div class="big">≥ 90%</div><p>планов с полным совпадением критичных полей с эталоном: инструмент, направление, объём, цена, условие</p></div>
+      <div class="card"><div class="big">0</div><p>неверных исполнений в неоднозначных случаях — вместо ошибки агент задаёт уточняющий вопрос</p></div>
+      <div class="card"><div class="big">200</div><p>своих размеченных запросов на русском плюс открытые датасеты function-calling (xLAM, BFCL)</p></div>
+    </div>
+    <p class="sub" style="margin-top:20px">Базовое решение для сравнения — парсер на правилах и регулярных выражениях; ориентир — результаты моделей на бенчмарке BFCL.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Риски и как их проверить</h2>
+    <div class="grid">
+      <div class="card risk"><span class="pill">Качество AI</span><p>Ошибка в объёме или цене плана. Снижаем LoRA-дообучением и контролем уверенности. Проверка — прогон на 200 запросах до разработки UI.</p></div>
+      <div class="card risk"><span class="pill">Регуляторика</span><p>Исполнение агентом могут счесть инвестрекомендацией или доверительным управлением. Проверка — консультация с экспертами Т-Инвестиций.</p></div>
+      <div class="card risk"><span class="pill">Ограничения API</span><p>Нет нужных типов заявок, лимиты запросов, sandbox ≠ прод. Проверка — сквозной прототип в первые дни.</p></div>
+      <div class="card risk"><span class="pill">Доверие</span><p>Новички могут не доверить деньги агенту. Проверка — кликабельный макет 10–15 начинающим инвесторам.</p></div>
+      <div class="card risk"><span class="pill">Скорость</span><p>Локальная модель медленная. Снижаем REFRAG и маршрутизацией простых шагов в лёгкий классификатор. Проверка — замер задержки.</p></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>План</h2>
+    <div class="road">
+      <div class="card"><b>Отбор</b><h3>Концепция</h3><p>Идея, сценарий, архитектура, гипотезы.</p></div>
+      <div class="card"><b>21 ноября</b><h3>Контекст</h3><p>Проверка рисков с экспертами, уточнение сценария.</p></div>
+      <div class="card"><b>23 ноября — 3 декабря</b><h3>MVP</h3><p>Сквозной сценарий на sandbox, оценка на размеченном наборе.</p></div>
+      <div class="card"><b>5 декабря</b><h3>Демо</h3><p>Живой сценарий: запрос → план → подтверждение → срабатывание условия.</p></div>
+      <div class="card"><b>Дальше</b><h3>Пилот</h3><p>Модуль в вебе и приложении Т-Инвестиций.</p></div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">Концепция для программы Инвест. Премаркет. Не является инвестиционной рекомендацией. Все сделки в MVP выполняются в sandbox.</div>
+</footer>
+
+</body>
+</html>
