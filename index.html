@@ -185,6 +185,37 @@ h2.in::after{transform:scaleX(1)}
 tbody tr{transition:background .25s}
 tbody tr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
 
+/* ---------- section navigation ---------- */
+html{scroll-behavior:smooth}
+header.hero,section{scroll-margin-top:12px}
+#rail{position:fixed;right:20px;top:50%;transform:translateY(-50%);z-index:20;display:flex;flex-direction:column;gap:4px;
+  padding:10px 8px;border-radius:16px;border:1px solid var(--line);
+  background:color-mix(in srgb,var(--surface) 70%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+#rail a{display:flex;align-items:center;justify-content:flex-end;gap:10px;text-decoration:none;color:var(--muted);
+  font-size:13px;padding:4px 6px;border-radius:8px;transition:color .25s,background .25s}
+#rail a .t{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .35s,opacity .25s}
+#rail:hover a .t{max-width:180px;opacity:1}#rail a .d{width:10px;height:10px;border-radius:50%;border:2px solid var(--muted);flex:none;transition:all .3s}
+#rail a:hover{color:var(--text);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+#rail a.on{color:var(--text)}
+#rail a.on .d{border-color:var(--accent);background:var(--accent);box-shadow:0 0 12px var(--accent);transform:scale(1.25)}
+#rail .top{justify-content:center;margin-top:4px;border-top:1px solid var(--line);padding-top:8px;font-size:15px}
+#navbtn,#sheet{display:none}
+@media (max-width:1180px){
+  #rail{display:none}
+  #navbtn{display:grid;place-items:center;position:fixed;right:16px;bottom:16px;z-index:30;width:52px;height:52px;border-radius:50%;
+    border:0;cursor:pointer;color:#17181a;font-size:22px;background:linear-gradient(135deg,var(--accent),var(--ai));
+    box-shadow:0 10px 30px -8px color-mix(in srgb,var(--accent) 60%,transparent)}
+  #sheet{display:block;position:fixed;right:16px;bottom:80px;z-index:30;width:min(280px,calc(100vw - 32px));max-height:70vh;overflow:auto;
+    padding:8px;border-radius:16px;border:1px solid var(--line);
+    background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+    opacity:0;transform:translateY(12px) scale(.96);transform-origin:100% 100%;pointer-events:none;transition:opacity .25s,transform .25s}
+  #sheet.open{opacity:1;transform:none;pointer-events:auto}
+  #sheet a{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:10px;color:var(--text);text-decoration:none;font-size:15px}
+  #sheet a .d{width:8px;height:8px;border-radius:50%;background:var(--line);flex:none}
+  #sheet a.on{background:color-mix(in srgb,var(--accent) 14%,transparent)}
+  #sheet a.on .d{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+}
+
 /* ---------- phone ---------- */
 @media (max-width:640px){
   body{font-size:15px}
@@ -419,6 +450,34 @@ tbody tr:hover{background:color-mix(in srgb,var(--accent) 10%,transparent)}
   // table labels for stacked mobile layout
   const heads = $$('.tablewrap thead th').map(th => th.textContent);
   $$('.tablewrap tbody tr').forEach(tr => $$('td', tr).forEach((td, i) => td.dataset.l = heads[i] || ''));
+
+  // section navigation: right rail on desktop, floating menu on smaller screens
+  const secs = [document.querySelector('header.hero'), ...$$('section')];
+  const names = secs.map((s, i) => i ? s.querySelector('h2').textContent : 'Начало');
+  secs.forEach((s, i) => s.id = s.id || `s${i}`);
+  const links = names.map((n, i) => `<a href="#${secs[i].id}" data-i="${i}"><span class="t">${n}</span><span class="d"></span></a>`).join('');
+  const rail = document.createElement('nav');
+  rail.id = 'rail'; rail.setAttribute('aria-label', 'Разделы');
+  rail.innerHTML = links + '<a href="#s0" class="top" aria-label="Наверх">↑</a>';
+  const btn = document.createElement('button');
+  btn.id = 'navbtn'; btn.type = 'button'; btn.setAttribute('aria-label', 'Разделы'); btn.textContent = '☰';
+  const sheet = document.createElement('nav');
+  sheet.id = 'sheet'; sheet.setAttribute('aria-label', 'Разделы');
+  sheet.innerHTML = names.map((n, i) => `<a href="#${secs[i].id}" data-i="${i}"><span class="d"></span>${n}</a>`).join('');
+  document.body.append(rail, btn, sheet);
+  const toggle = open => { sheet.classList.toggle('open', open); btn.textContent = open ? '✕' : '☰'; };
+  btn.addEventListener('click', () => toggle(!sheet.classList.contains('open')));
+  sheet.addEventListener('click', e => e.target.closest('a') && toggle(false));
+  document.addEventListener('click', e => { if (!e.target.closest('#sheet, #navbtn')) toggle(false); });
+  const setActive = i => $$('#rail a[data-i], #sheet a').forEach(a => a.classList.toggle('on', +a.dataset.i === i));
+  const spy = () => {
+    const y = innerHeight * 0.35;
+    let idx = 0;
+    secs.forEach((s, i) => { if (s.getBoundingClientRect().top <= y) idx = i; });
+    if (innerHeight + scrollY >= document.documentElement.scrollHeight - 4) idx = secs.length - 1;
+    setActive(idx);
+  };
+  addEventListener('scroll', spy, { passive: true }); spy();
 
   // seamless marquee
   const track = document.querySelector('.marquee .track');
